@@ -1,6 +1,7 @@
 import cv2
 import pytesseract
 from PIL import Image
+import re
 
 harcascade = "model/haarcascade_russian_plate_number.xml"
 
@@ -13,12 +14,31 @@ min_area = 500
 count = 0
 
 
+allowed_plates = ["1623924", "23924"]
+
+
+def FilterVehicles(plate):
+    for allowed_number in allowed_plates:
+        set1 = set(str(allowed_number))
+        set2 = set(str(plate))
+        intersection = set1.intersection(set2)
+        union = set1.union(set2)
+        if (len(intersection) / len(union) >= 0.7) and (len(plate.strip()) == len(allowed_number)):
+            print(plate, "allowed", len(intersection) / len(union))
+
+
 def extractText(image):
     pil_image = Image.fromarray(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     # Use pytesseract to extract text
     text = pytesseract.image_to_string(pil_image)
+    print("text", text)
+    filtered_text = re.sub(r'\D', '', text)  # Remove non-numeric characters
     # Print the extracted text
-    print(text)
+    print('filtered_text' + filtered_text)
+    if filtered_text:
+        # Check if the filtered text is similar to an allowed plate and print a message
+        if FilterVehicles(filtered_text):
+            print("Plate is similar to an allowed plate!")
 
 
 while True:
@@ -44,7 +64,8 @@ while True:
     extractText(img)
     if cv2.waitKey(1) & 0xFF == ord('s'):
         cv2.imwrite("plates/scaned_img_" + str(count) + ".jpg", img_roi)
-        cv2.rectangle(img, (0, 200), (640, 300), (0, 255, 0), cv2.FILLED)
+        cv.rectangle(img, (0, 200), (640, 300),
+                     (0, 255, 0), cv2.FILLED)  # Typo fix
         cv2.putText(img, "Plate Saved", (150, 265),
                     cv2.FONT_HERSHEY_COMPLEX_SMALL, 2, (0, 0, 255), 2)
         cv2.imshow("Results", img)
